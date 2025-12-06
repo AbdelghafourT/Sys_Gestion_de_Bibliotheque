@@ -1,0 +1,241 @@
+-- ============================================
+-- EXERCICE : Système de Gestion de Bibliothèque
+-- ============================================
+
+-- ============================================
+-- 1. MODÈLE CONCEPTUEL DE DONNÉES (MCD)
+-- ============================================
+/*
+Relations et cardinalités :
+
+AUTEUR (1,n) ECRIRE (1,n) LIVRE : Un auteur écrit un ou plusieurs livres, un livre est écrit par un ou plusieurs auteurs
+EDITEUR (1,n) édite (0,1) LIVRE : Un éditeur édite plusieurs livres, un livre est édité par un seul éditeur
+LECTEUR (1,n) EMPRUNT (0,1) LIVRE : Un lecteur peut emprunter plusieurs livres, un livre peut être emprunté par plusieurs lecteurs
+*/
+
+-- ============================================
+-- 2. MODÈLE LOGIQUE DE DONNÉES (MLD)
+-- ============================================
+
+/*
+AUTEUR (<u>id_auteur</u>, nom, prenom, date_naissance)
+EDITEUR (<u>id_editeur</u>, nom, adresse)
+LIVRE (<u>ISBN</u>, titre, annee_publication, #id_editeur)
+LECTEUR (<u>id_lecteur</u>, nom, prenom, adresse)
+ECRIRE (<u>#id_auteur, #ISBN</u>)
+EMPRUNT (<u>id_emprunt</u>, #id_lecteur, #ISBN, date_emprunt, date_retour)
+*/
+
+-- ============================================
+-- CRÉATION DES TABLES
+-- ============================================
+
+-- Table EDITEUR
+CREATE TABLE EDITEUR (
+    id_editeur SERIAL PRIMARY KEY,
+    nom VARCHAR(100) NOT NULL,
+    adresse VARCHAR(255)
+);
+
+-- Table LIVRE
+CREATE TABLE LIVRE (
+    ISBN VARCHAR(20) PRIMARY KEY,
+    titre VARCHAR(200) NOT NULL,
+    annee_publication INT,
+    id_editeur INT NOT NULL,
+    CONSTRAINT fk_livre_editeur FOREIGN KEY (id_editeur) 
+        REFERENCES EDITEUR(id_editeur) ON DELETE RESTRICT
+);
+
+-- Table AUTEUR
+CREATE TABLE AUTEUR (
+    id_auteur SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    date_naissance DATE
+);
+
+-- Table ECRIRE (relation N:N entre AUTEUR et LIVRE)
+CREATE TABLE ECRIRE (
+    id_auteur INT,
+    ISBN VARCHAR(20),
+    PRIMARY KEY (id_auteur, ISBN),
+    CONSTRAINT fk_ecrire_auteur FOREIGN KEY (id_auteur) 
+        REFERENCES AUTEUR(id_auteur) ON DELETE CASCADE,
+    CONSTRAINT fk_ecrire_livre FOREIGN KEY (ISBN) 
+        REFERENCES LIVRE(ISBN) ON DELETE CASCADE
+);
+
+-- Table LECTEUR
+CREATE TABLE LECTEUR (
+    id_lecteur SERIAL PRIMARY KEY,
+    nom VARCHAR(50) NOT NULL,
+    prenom VARCHAR(50) NOT NULL,
+    adresse VARCHAR(255)
+);
+
+-- Table EMPRUNT
+CREATE TABLE EMPRUNT (
+    id_emprunt SERIAL PRIMARY KEY,
+    id_lecteur INT NOT NULL,
+    ISBN VARCHAR(20) NOT NULL,
+    date_emprunt DATE NOT NULL,
+    date_retour DATE,
+    CONSTRAINT fk_emprunt_lecteur FOREIGN KEY (id_lecteur) 
+        REFERENCES LECTEUR(id_lecteur) ON DELETE RESTRICT,
+    CONSTRAINT fk_emprunt_livre FOREIGN KEY (ISBN) 
+        REFERENCES LIVRE(ISBN) ON DELETE RESTRICT,
+    CONSTRAINT chk_dates CHECK (date_retour IS NULL OR date_retour >= date_emprunt)
+);
+
+-- Création d'index pour améliorer les performances
+CREATE INDEX idx_emprunt_lecteur ON EMPRUNT(id_lecteur);
+CREATE INDEX idx_emprunt_isbn ON EMPRUNT(ISBN);
+CREATE INDEX idx_emprunt_date_retour ON EMPRUNT(date_retour);
+CREATE INDEX idx_livre_editeur ON LIVRE(id_editeur);
+CREATE INDEX idx_ecrire_auteur ON ECRIRE(id_auteur);
+CREATE INDEX idx_ecrire_isbn ON ECRIRE(ISBN);
+
+-- ============================================
+-- INSERTION DES DONNÉES
+-- ============================================
+
+-- Insertion des EDITEURS
+INSERT INTO EDITEUR (nom, adresse) VALUES
+('Gallimard', '5 Rue Gaston-Gallimard, 75007 Paris'),
+('Flammarion', '87 Quai Panhard-et-Levassor, 75013 Paris'),
+('Hachette', '58 Rue Jean Bleuzen, 92170 Vanves'),
+('Albin Michel', '22 Rue Huyghens, 75014 Paris'),
+('Le Seuil', '92 Avenue de France, 75013 Paris');
+
+-- Insertion des LIVRES
+INSERT INTO LIVRE (ISBN, titre, annee_publication, id_editeur) VALUES
+('978-2-07-036822-9', 'L''Étranger', 1942, 1),
+('978-2-07-037667-5', 'La Peste', 1947, 1),
+('978-2-08-070398-6', 'Le Petit Prince', 1943, 2),
+('978-2-01-395524-1', 'Les Misérables', 1862, 3),
+('978-2-226-05691-0', 'Le Comte de Monte-Cristo', 1844, 4),
+('978-2-02-118169-7', '1984', 1949, 5),
+('978-2-07-036959-2', 'Madame Bovary', 1857, 1),
+('978-2-08-121934-1', 'Candide', 1759, 2);
+
+-- Insertion des AUTEURS
+INSERT INTO AUTEUR (nom, prenom, date_naissance) VALUES
+('Camus', 'Albert', '1913-11-07'),
+('Saint-Exupéry', 'Antoine', '1900-06-29'),
+('Hugo', 'Victor', '1802-02-26'),
+('Dumas', 'Alexandre', '1802-07-24'),
+('Orwell', 'George', '1903-06-25'),
+('Flaubert', 'Gustave', '1821-12-12'),
+('Voltaire', 'François-Marie', '1694-11-21');
+
+-- Insertion des relations ECRIRE (Auteur - Livre)
+INSERT INTO ECRIRE (id_auteur, ISBN) VALUES
+(1, '978-2-07-036822-9'),  -- Camus - L'Étranger
+(1, '978-2-07-037667-5'),  -- Camus - La Peste
+(2, '978-2-08-070398-6'),  -- Saint-Exupéry - Le Petit Prince
+(3, '978-2-01-395524-1'),  -- Hugo - Les Misérables
+(4, '978-2-226-05691-0'),  -- Dumas - Le Comte de Monte-Cristo
+(5, '978-2-02-118169-7'),  -- Orwell - 1984
+(6, '978-2-07-036959-2'),  -- Flaubert - Madame Bovary
+(7, '978-2-08-121934-1');  -- Voltaire - Candide
+
+-- Insertion des LECTEURS
+INSERT INTO LECTEUR (nom, prenom, adresse) VALUES
+('Benali', 'Fatima', '12 Rue Mohammed V, Casablanca'),
+('El Amrani', 'Karim', '45 Avenue Hassan II, Rabat'),
+('Idrissi', 'Amina', '78 Boulevard Zerktouni, Casablanca'),
+('Tazi', 'Mehdi', '23 Rue de la Liberté, Marrakech'),
+('Bennani', 'Sarah', '56 Avenue des FAR, Casablanca');
+
+-- Insertion des EMPRUNTS
+INSERT INTO EMPRUNT (id_lecteur, ISBN, date_emprunt, date_retour) VALUES
+-- Emprunts retournés
+(1, '978-2-07-036822-9', '2024-11-01', '2024-11-15'),
+(2, '978-2-08-070398-6', '2024-11-05', '2024-11-20'),
+(3, '978-2-01-395524-1', '2024-11-10', '2024-11-25'),
+-- Emprunts en cours (date_retour NULL)
+(1, '978-2-07-037667-5', '2024-11-20', NULL),
+(4, '978-2-226-05691-0', '2024-11-25', NULL),
+(5, '978-2-02-118169-7', '2024-11-28', NULL),
+-- Emprunts en retard (date_retour NULL et date_emprunt > 15 jours)
+(2, '978-2-07-036959-2', '2024-10-15', NULL),
+(3, '978-2-08-121934-1', '2024-10-20', NULL);
+
+-- ============================================
+-- REQUÊTES DE SÉLECTION
+-- ============================================
+
+-- 5. Sélectionner tous les livres empruntés par un lecteur donné
+-- Exemple : lecteur avec id_lecteur = 1 (Fatima Benali)
+SELECT L.ISBN, L.titre, L.annee_publication, E.date_emprunt, E.date_retour
+FROM LIVRE L
+INNER JOIN EMPRUNT E ON L.ISBN = E.ISBN
+WHERE E.id_lecteur = 1;
+
+-- 6. Sélectionner tous les livres disponibles (non empruntés) à une date donnée
+-- Livres qui ne sont pas en cours d'emprunt (date_retour IS NOT NULL ou pas d'emprunt)
+SELECT L.ISBN, L.titre, L.annee_publication, ED.nom AS editeur
+FROM LIVRE L
+INNER JOIN EDITEUR ED ON L.id_editeur = ED.id_editeur
+WHERE L.ISBN NOT IN (
+    SELECT ISBN 
+    FROM EMPRUNT 
+    WHERE date_retour IS NULL
+);
+
+-- 7. Sélectionner tous les lecteurs ayant des livres en retard
+-- Considérant qu'un emprunt doit être retourné dans les 15 jours
+SELECT DISTINCT LEC.id_lecteur, LEC.nom, LEC.prenom, LEC.adresse,
+       L.titre, E.date_emprunt,
+       CURRENT_DATE - E.date_emprunt AS jours_emprunt
+FROM LECTEUR LEC
+INNER JOIN EMPRUNT E ON LEC.id_lecteur = E.id_lecteur
+INNER JOIN LIVRE L ON E.ISBN = L.ISBN
+WHERE E.date_retour IS NULL 
+  AND (CURRENT_DATE - E.date_emprunt) > 15
+ORDER BY jours_emprunt DESC;
+
+-- 8. Sélectionner tous les emprunts en cours avec détails du livre et du lecteur
+SELECT E.id_emprunt, E.date_emprunt,
+       LEC.nom AS lecteur_nom, LEC.prenom AS lecteur_prenom,
+       L.ISBN, L.titre, L.annee_publication,
+       ED.nom AS editeur,
+       CURRENT_DATE - E.date_emprunt AS jours_emprunt
+FROM EMPRUNT E
+INNER JOIN LECTEUR LEC ON E.id_lecteur = LEC.id_lecteur
+INNER JOIN LIVRE L ON E.ISBN = L.ISBN
+INNER JOIN EDITEUR ED ON L.id_editeur = ED.id_editeur
+WHERE E.date_retour IS NULL
+ORDER BY E.date_emprunt;
+
+-- 9. Sélectionner tous les auteurs qui n'ont pas de livres empruntés
+-- (aucun emprunt en cours pour leurs livres)
+SELECT DISTINCT A.id_auteur, A.nom, A.prenom, A.date_naissance
+FROM AUTEUR A
+WHERE A.id_auteur NOT IN (
+    SELECT DISTINCT EC.id_auteur
+    FROM ECRIRE EC
+    INNER JOIN EMPRUNT E ON EC.ISBN = E.ISBN
+    WHERE E.date_retour IS NULL
+);
+
+-- 10. Sélectionner tous les livres empruntés et leur statut
+SELECT L.ISBN, L.titre, L.annee_publication,
+       LEC.nom AS lecteur_nom, LEC.prenom AS lecteur_prenom,
+       E.date_emprunt, E.date_retour,
+       CASE 
+           WHEN E.date_retour IS NULL THEN 'Emprunté'
+           ELSE 'Retourné'
+       END AS statut,
+       CASE 
+           WHEN E.date_retour IS NULL 
+                AND (CURRENT_DATE - E.date_emprunt) > 15 
+           THEN 'En retard'
+           WHEN E.date_retour IS NULL THEN 'Dans les délais'
+           ELSE 'Complété'
+       END AS etat
+FROM LIVRE L
+INNER JOIN EMPRUNT E ON L.ISBN = E.ISBN
+INNER JOIN LECTEUR LEC ON E.id_lecteur = LEC.id_lecteur
+ORDER BY E.date_emprunt DESC;
