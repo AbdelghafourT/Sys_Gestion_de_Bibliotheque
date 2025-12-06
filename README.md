@@ -7,6 +7,7 @@
 <img src="/REQUETE_SCREENSHOT/Req_6.png" alt="" width="600"/>
 
 -- 7. Sélectionner tous les lecteurs ayant des livres en retard Considérant qu'un emprunt doit être retourné dans les 15 jours
+
 <img src="/REQUETE_SCREENSHOT/Req_7.png" alt="" width="600"/>
 
 -- 8. Sélectionner tous les emprunts en cours avec détails du livre et du lecteur
